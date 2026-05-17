@@ -110,9 +110,9 @@ export default function Home() {
       <div style={{ height: "calc(100vh - 56px)" }} />
 
       <div style={{
-        position: "fixed",
+        position: isEnded ? "relative" : "fixed",
         top: 0, left: 0, right: 0,
-        height: "100vh", zIndex: isEnded ? -1 : 10,
+        height: "100vh", zIndex: isEnded ? 0 : 10,
       }}>
         <FrameScrubber onScrub={handleScrub} />
 
