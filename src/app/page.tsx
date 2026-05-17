@@ -68,10 +68,9 @@ function FrameScrubber({ sectionRef }: { sectionRef: React.RefObject<HTMLDivElem
 
       const onScroll = () => {
         const rect = section.getBoundingClientRect();
-        const scrolled = -rect.top;
-        const maxScroll = window.innerHeight;
-        if (maxScroll <= 0) return;
-        const p = Math.max(0, Math.min(1, scrolled / maxScroll));
+        const h = rect.height - window.innerHeight;
+        if (h <= 0) return;
+        const p = Math.max(0, Math.min(1, -rect.top / h));
         const fi = Math.min(TOTAL_FRAMES - 1, Math.floor(p * TOTAL_FRAMES));
         if (fi !== currentRef.current) { currentRef.current = fi; drawFrame(fi); }
       };
@@ -119,10 +118,9 @@ function Hero() {
 
       const onScroll = () => {
         const rect = section.getBoundingClientRect();
-        const scrolled = -rect.top;
-        const maxScroll = window.innerHeight;
-        if (maxScroll <= 0) return;
-        setProgress(Math.max(0, Math.min(1, scrolled / maxScroll)));
+        const h = section.clientHeight - window.innerHeight;
+        if (h <= 0) return;
+        setProgress(Math.max(0, Math.min(1, -rect.top / h)));
       };
 
       lenis.on("scroll", onScroll);
@@ -135,8 +133,8 @@ function Hero() {
   }, []);
 
   return (
-    <section ref={ref} className="relative h-[100vh] bg-[#111118]">
-      <div className="fixed top-0 left-0 right-0 h-screen w-full overflow-hidden" style={{ display: progress < 1 ? "block" : "none" }}>
+    <section ref={ref} className="relative h-[200vh] bg-[#111118]">
+      <div className="sticky top-0 h-screen w-full overflow-hidden">
         <FrameScrubber sectionRef={ref} />
 
         <div className="absolute top-0 left-0 right-0 p-5 md:p-8 z-10">
