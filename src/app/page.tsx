@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useCallback, useEffect } from "react";
-import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 // ── Constants ──
 const TOTAL = 61;
@@ -220,14 +220,8 @@ export default function Home() {
         </motion.div>
       </div>
 
-      {/* ── CONTENT ── */}
-      <AnimatePresence>
-        {ended && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4 }}
-          >
+      {/* ── CONTENT ── always in flow, just invisible until ended */}
+      <div style={{ opacity: ended ? 1 : 0, transition: "opacity 0.4s" }}>
             {/* Marquee */}
             <div className="py-2.5 border-b border-gray-100 overflow-hidden bg-white">
               <div className="marquee-track">
@@ -351,9 +345,7 @@ export default function Home() {
                 <p>© 2026 JRV Rental Services. Powered by <a href="https://jrvsystems.app" className="text-[#FF4500] hover:underline">JRV Systems</a></p>
               </div>
             </footer>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
     </main>
   );
 }
