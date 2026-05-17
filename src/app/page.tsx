@@ -2,6 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect } from "react";
 import { motion, useScroll, useTransform, useMotionValueEvent } from "framer-motion";
+import { useLenis } from "@/components/LenisProvider";
 
 // ── Video Scrubber with Lenis-aware scroll ──
 function VideoScrubber({ src, sectionRef }: { src: string; sectionRef: React.RefObject<HTMLDivElement | null> }) {
@@ -30,27 +31,27 @@ function VideoScrubber({ src, sectionRef }: { src: string; sectionRef: React.Ref
     el.addEventListener("loadeddata", () => { el.currentTime = 0; setTimeout(draw, 200); });
   }, [draw]);
 
-  // Track scroll via Lenis (from window)
-  useEffect(() => {
-    if (!ok) return;
-    const section = sectionRef.current;
-    if (!section) return;
+  const lenis = useLenis();
 
-    const onScroll = (e: any) => {
+  // Track scroll via Lenis
+  useEffect(() => {
+    if (!ok || !lenis || !sectionRef.current) return;
+    const section = sectionRef.current;
+
+    const onLenisScroll = () => {
       const vid = v.current;
       if (!vid || !dur.current) return;
       // Calculate progress through this section
       const rect = section.getBoundingClientRect();
-      const sectionTop = rect.top;
       const sectionHeight = rect.height - window.innerHeight;
-      const progress = Math.max(0, Math.min(1, -sectionTop / sectionHeight));
+      const progress = Math.max(0, Math.min(1, -rect.top / sectionHeight));
       vid.currentTime = progress * dur.current;
     };
 
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll({}); // initial frame
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [ok, sectionRef]);
+    lenis.on("scroll", onLenisScroll);
+    onLenisScroll(); // initial frame
+    return () => lenis.off("scroll", onLenisScroll);
+  }, [ok, lenis, sectionRef]);
 
   useEffect(() => {
     window.addEventListener("resize", draw);
@@ -75,7 +76,9 @@ function Hero() {
   const [progress, setProgress] = useState(0);
 
   // Track Lenis scroll progress for overlay fades
+  const lenis = useLenis();
   useEffect(() => {
+    if (!lenis) return;
     const section = ref.current;
     if (!section) return;
     const onScroll = () => {
@@ -84,14 +87,14 @@ function Hero() {
       if (h <= 0) return;
       setProgress(Math.max(0, Math.min(1, -rect.top / h)));
     };
-    window.addEventListener("scroll", onScroll, { passive: true });
+    lenis.on("scroll", onScroll);
     onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+    return () => lenis.off("scroll", onScroll);
+  }, [lenis]);
 
   return (
     <section ref={ref} className="relative h-[400vh] bg-[#111118]">
-      <div className="sticky top-0 h-screen w-full overflow-hidden">
+      <div className="fixed top-0 h-screen w-full overflow-hidden">
         <VideoScrubber src="/car-scroll.mp4" sectionRef={ref} />
 
         <div className="absolute top-0 left-0 right-0 p-5 md:p-8 z-10">
