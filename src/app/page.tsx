@@ -26,7 +26,7 @@ function FrameScrubber({ onProgress }: { onProgress: (p: number) => void }) {
   const draw = useCallback((fi: number) => {
     const can = cRef.current, img = imgs.current[fi];
     if (!can || !img || !img.complete || !img.naturalWidth) return;
-    const ctx = can.getContext("2d"); if (!ctx) return;
+    const ctx = can.getContext("2d", { willReadFrequently: true }); if (!ctx) return;
     const cw = window.innerWidth, ch = window.innerHeight;
     can.width = cw; can.height = ch; can.style.width = cw + "px"; can.style.height = ch + "px";
     const s = Math.max(cw / img.naturalWidth, ch / img.naturalHeight);
