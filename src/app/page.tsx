@@ -42,7 +42,7 @@ function Scrubber({ onProg }: { onProg: (p: number) => void }) {
     let cl: (() => void) | undefined, rt: any;
     const at = () => {
       const l = (window as any).__lenis;
-      if (!l) { rt = setTimeout(at, 300); return; }
+      if (!l) { rt = setTimeout(at, 0); return; }
       const os = () => {
         const p = Math.min(1, window.scrollY / window.innerHeight);
         const fi = Math.min(TOTAL - 1, Math.floor(p * TOTAL));
