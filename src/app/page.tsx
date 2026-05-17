@@ -133,8 +133,13 @@ export default function Home() {
       {/* Spacer — pushes content to viewport position when video ends */}
       <div style={{ height: "calc(100vh - 56px)" }} />
 
-      {/* Video — fixed during scroll, hidden after */}
-      <div style={{ display: isEnded ? "none" : "block", position: "fixed", top: 0, left: 0, right: 0, height: "100vh", zIndex: 10 }}>
+      {/* Video — fixed during scroll, scrolls up naturally after */}
+      <div style={{
+        position: isEnded ? "relative" : "fixed",
+        top: 0, left: 0, right: 0,
+        height: "100vh",
+        zIndex: isEnded ? 0 : 10,
+      }}>
         <FrameScrubber onScrub={handleScrub} />
 
         <div className="absolute top-0 left-0 right-0 p-5 md:p-8 z-10">
