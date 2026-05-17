@@ -5,12 +5,11 @@ import { useRef, useState, useCallback, useEffect } from "react";
 const TOTAL_FRAMES = 61;
 const frameUrl = (i: number) => `/frames/frame_${String(i + 1).padStart(4, "0")}.jpg`;
 
-function FrameScrubber({ onEnd }: { onEnd: () => void }) {
+function FrameScrubber({ onScrub }: { onScrub: (p: number) => void }) {
   const cRef = useRef<HTMLCanvasElement>(null);
   const imgs = useRef<HTMLImageElement[]>([]);
   const [ready, setReady] = useState(false);
   const cur = useRef(-1);
-  const fired = useRef(false);
 
   useEffect(() => {
     const arr: HTMLImageElement[] = [];
@@ -41,17 +40,18 @@ function FrameScrubber({ onEnd }: { onEnd: () => void }) {
       const lenis = (window as any).__lenis;
       if (!lenis) { retry = setTimeout(attach, 300); return; }
       const onScroll = () => {
-        const p = Math.min(1, window.scrollY / window.innerHeight);
+        const scrolled = window.scrollY;
+        const p = Math.min(1, scrolled / window.innerHeight);
         const fi = Math.min(TOTAL_FRAMES - 1, Math.floor(p * TOTAL_FRAMES));
         if (fi !== cur.current) { cur.current = fi; draw(fi); }
-        if (p >= 1 && !fired.current && window.scrollY > 0) { fired.current = true; onEnd(); }
+        onScrub(p);
       };
       lenis.on("scroll", onScroll); onScroll();
       cleanup = () => lenis.off("scroll", onScroll);
     };
     attach();
     return () => { clearTimeout(retry); if (cleanup) cleanup(); };
-  }, [ready, draw, onEnd]);
+  }, [ready, draw, onScrub]);
 
   return (
     <div className="absolute inset-0 bg-[#111118]">
@@ -82,7 +82,18 @@ function Nav() {
 }
 
 export default function Home() {
-  const [ended, setEnded] = useState(false);
+  const scrollRef = useRef(0);
+  const [scrollY, setScrollY] = useState(0);
+  const [vp, setVp] = useState(0);
+
+  useEffect(() => { setVp(window.innerHeight); }, []);
+
+  const isEnded = vp > 0 && scrollY >= vp;
+
+  const handleScrub = useCallback((p: number) => {
+    scrollRef.current = p * window.innerHeight;
+    setScrollY(scrollRef.current);
+  }, []);
 
   const cars = [
     { n: "Perodua Axia G1", p: "RM 110", s: "5s · Hatchback" },
@@ -123,8 +134,8 @@ export default function Home() {
       <div style={{ height: "calc(100vh - 56px)" }} />
 
       {/* Video — fixed during scroll, hidden after */}
-      <div style={{ display: ended ? "none" : "block", position: "fixed", top: 0, left: 0, right: 0, height: "100vh", zIndex: 10 }}>
-        <FrameScrubber onEnd={() => setEnded(true)} />
+      <div style={{ display: isEnded ? "none" : "block", position: "fixed", top: 0, left: 0, right: 0, height: "100vh", zIndex: 10 }}>
+        <FrameScrubber onScrub={handleScrub} />
 
         <div className="absolute top-0 left-0 right-0 p-5 md:p-8 z-10">
           <div className="flex items-center gap-2.5">
@@ -149,7 +160,7 @@ export default function Home() {
       {/* Content — in normal flow, creates scroll height */}
       {/* Hidden until video ends, then visible */}
       {/* Content — hidden until video ends */}
-      <div style={{ opacity: ended ? 1 : 0 }}>
+      <div style={{ opacity: isEnded ? 1 : 0 }}>
           <div className="py-6 md:py-8 border-b border-gray-100">
             <div className="max-w-5xl mx-auto px-4 grid grid-cols-3 gap-4">
               {[{ v: "50+", l: "Cars" },{ v: "1K+", l: "Clients" },{ v: "4.9", l: "Rating" }].map(x => (
