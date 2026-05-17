@@ -4,10 +4,7 @@ import { useRef, useState, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 
 const TOTAL_FRAMES = 121;
-
-function frameUrl(i: number): string {
-  return `/frames/frame_${String(i + 1).padStart(4, "0")}.jpg`;
-}
+const frameUrl = (i: number) => `/frames/frame_${String(i + 1).padStart(4, "0")}.jpg`;
 
 // ── Frame Scrubber ──
 function FrameScrubber({ onProgress }: { onProgress: (p: number) => void }) {
@@ -22,8 +19,7 @@ function FrameScrubber({ onProgress }: { onProgress: (p: number) => void }) {
     for (let i = 0; i < TOTAL_FRAMES; i++) {
       const img = new Image();
       img.onload = img.onerror = () => { loaded++; if (loaded === TOTAL_FRAMES) { imgs.current = arr; setReady(true); } };
-      img.src = frameUrl(i);
-      arr.push(img);
+      img.src = frameUrl(i); arr.push(img);
     }
     return () => arr.forEach(i => { i.src = ""; });
   }, []);
@@ -33,8 +29,7 @@ function FrameScrubber({ onProgress }: { onProgress: (p: number) => void }) {
     if (!can || !img || !img.complete || !img.naturalWidth) return;
     const ctx = can.getContext("2d"); if (!ctx) return;
     const cw = window.innerWidth, ch = window.innerHeight;
-    can.style.width = cw + "px"; can.style.height = ch + "px";
-    can.width = cw; can.height = ch;
+    can.width = cw; can.height = ch; can.style.width = cw + "px"; can.style.height = ch + "px";
     const s = Math.max(cw / img.naturalWidth, ch / img.naturalHeight);
     const sw = img.naturalWidth * s, sh = img.naturalHeight * s;
     ctx.clearRect(0, 0, cw, ch);
@@ -44,11 +39,9 @@ function FrameScrubber({ onProgress }: { onProgress: (p: number) => void }) {
   useEffect(() => {
     if (!ready) return;
     let cleanup: (() => void) | undefined, retry: any;
-
     const attach = () => {
       const lenis = (window as any).__lenis;
       if (!lenis) { retry = setTimeout(attach, 300); return; }
-
       const onScroll = () => {
         const scrolled = window.scrollY;
         const maxScroll = window.innerHeight;
@@ -57,41 +50,46 @@ function FrameScrubber({ onProgress }: { onProgress: (p: number) => void }) {
         if (fi !== cur.current) { cur.current = fi; draw(fi); }
         onProgress(p);
       };
-
-      lenis.on("scroll", onScroll);
-      onScroll();
+      lenis.on("scroll", onScroll); onScroll();
       cleanup = () => lenis.off("scroll", onScroll);
     };
-
     attach();
     return () => { clearTimeout(retry); if (cleanup) cleanup(); };
   }, [ready, draw, onProgress]);
 
-  useEffect(() => {
-    if (!ready) return;
-    const fn = () => { if (cur.current >= 0) draw(cur.current); };
-    window.addEventListener("resize", fn);
-    return () => window.removeEventListener("resize", fn);
-  }, [ready, draw]);
-
   return (
     <div className="absolute inset-0 bg-[#111118]">
-      <canvas ref={cRef} className="block" style={{ width: "100vw", height: "100vh" }} />
+      <canvas ref={cRef} className="block" />
       <div className="absolute inset-0 bg-gradient-to-t from-[#111118]/80 via-transparent to-[#111118]/20" />
       {!ready && <div className="absolute inset-0 flex items-center justify-center"><div className="w-8 h-8 border-2 border-white/20 border-t-[#FF4500] rounded-full animate-spin" /></div>}
     </div>
   );
 }
 
-// ── Fixed Video Hero ──
+// ── Video Hero ──
 function VideoHero() {
-  const [progress, setProgress] = useState(0);
+  const [ended, setEnded] = useState(false);
+
+  const handleProgress = useCallback((p: number) => {
+    if (p >= 1 && !ended) setEnded(true);
+  }, [ended]);
 
   return (
     <>
-      {/* Fixed video — always fills viewport during scroll */}
-      <div className="fixed top-0 left-0 right-0 h-screen z-10" style={{ opacity: Math.min(1, (1 - progress) * 5) }}>
-        <FrameScrubber onProgress={setProgress} />
+      {/* Spacer — takes up one viewport so content starts below */}
+      <div className="h-screen" />
+
+      {/* Video — fixed until it ends, then scrolls up naturally */}
+      <div
+        className="h-screen w-full overflow-hidden z-10"
+        style={{
+          position: ended ? "relative" : "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+        }}
+      >
+        <FrameScrubber onProgress={handleProgress} />
 
         <div className="absolute top-0 left-0 right-0 p-5 md:p-8 z-10">
           <div className="flex items-center gap-2.5">
@@ -100,7 +98,7 @@ function VideoHero() {
           </div>
         </div>
 
-        <motion.div animate={{ opacity: Math.max(0, 1 - progress * 3), y: -progress * 40 }}
+        <motion.div animate={{ opacity: ended ? 0 : 1, y: ended ? -40 : 0 }}
           className="absolute left-0 right-0 px-5 md:px-8 z-10" style={{ bottom: "33%" }}>
           <div className="max-w-lg">
             <p className="text-[#FF4500]/80 text-[10px] font-bold tracking-[0.25em] uppercase mb-2">Seremban · Since 2020</p>
@@ -109,7 +107,7 @@ function VideoHero() {
           </div>
         </motion.div>
 
-        <motion.div animate={{ opacity: Math.max(0, 1 - progress * 8) }}
+        <motion.div animate={{ opacity: ended ? 0 : 1 }}
           className="absolute bottom-0 left-0 right-0 p-5 md:p-8 z-10">
           <div className="flex flex-col sm:flex-row gap-2.5 max-w-sm">
             <a href="https://wa.me/60126565477" target="_blank" rel="noopener noreferrer" className="bg-[#FF4500] text-white text-center font-bold px-7 py-3 rounded-xl text-sm hover:brightness-110 transition-all">Book via WhatsApp</a>
@@ -117,14 +115,11 @@ function VideoHero() {
           </div>
         </motion.div>
       </div>
-
-      {/* Spacer to prevent content overlap */}
-      <div className="h-screen" />
     </>
   );
 }
 
-// ── Sections (below hero) ──
+// ── Content Sections ──
 function Stats() {
   return (
     <motion.div id="content" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }} viewport={{ once: true }} className="bg-white border-b border-gray-100 py-6 md:py-8">
