@@ -48,8 +48,11 @@ function FrameScrubber({ sectionRef }: { sectionRef: React.RefObject<HTMLDivElem
     canvas.width = cw; canvas.height = ch;
     const scale = Math.max(cw / img.naturalWidth, ch / img.naturalHeight);
     const sw = img.naturalWidth * scale, sh = img.naturalHeight * scale;
+    // For portrait car video: align to bottom so the car stays visible
+    const sx = (cw - sw) / 2;
+    const sy = ch - sh;
     ctx.clearRect(0, 0, cw, ch);
-    ctx.drawImage(img, (cw - sw) / 2, (ch - sh) / 2, sw, sh);
+    ctx.drawImage(img, sx, sy, sw, sh);
   }, []);
 
   // Scroll tracking via Lenis
@@ -91,7 +94,7 @@ function FrameScrubber({ sectionRef }: { sectionRef: React.RefObject<HTMLDivElem
 
   return (
     <div className="absolute inset-0 bg-[#111118]">
-      <canvas ref={canvasRef} className="block w-screen h-screen" style={{ width: "100vw", height: "100vh" }} />
+      <canvas ref={canvasRef} className="block w-full h-full" />
       <div className="absolute inset-0 bg-gradient-to-t from-[#111118]/80 via-transparent to-[#111118]/20" />
       {!ready && <div className="absolute inset-0 flex items-center justify-center"><div className="w-8 h-8 border-2 border-white/20 border-t-[#FF4500] rounded-full animate-spin" /></div>}
     </div>
@@ -131,7 +134,7 @@ function Hero() {
 
   return (
     <section ref={ref} className="relative h-[200vh] bg-[#111118]">
-      <div className="sticky top-0 left-0 right-0 h-screen w-full overflow-hidden">
+      <div className="fixed top-0 left-0 right-0 h-screen w-full overflow-hidden" style={{ display: progress < 1 ? "block" : "none" }}>
         <FrameScrubber sectionRef={ref} />
 
         <div className="absolute top-0 left-0 right-0 p-5 md:p-8 z-10">
