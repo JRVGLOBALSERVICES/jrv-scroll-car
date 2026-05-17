@@ -3,7 +3,7 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 
-const TOTAL_FRAMES = 121;
+const TOTAL_FRAMES = 61;
 const frameUrl = (i: number) => `/frames/frame_${String(i + 1).padStart(4, "0")}.jpg`;
 
 function FrameScrubber({ onProgress }: { onProgress: (p: number) => void }) {
