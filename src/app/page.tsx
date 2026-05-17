@@ -138,7 +138,7 @@ export default function Home() {
         position: "fixed",
         top: 0, left: 0, right: 0,
         height: "100vh",
-        zIndex: isEnded ? 0 : 10,
+        zIndex: isEnded ? -1 : 10,
       }}>
         <FrameScrubber onScrub={handleScrub} />
 
