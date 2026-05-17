@@ -2,249 +2,160 @@
 
 import { useRef, useState, useCallback, useEffect } from "react";
 import { motion, useScroll, useTransform, useMotionValueEvent } from "framer-motion";
-import NavBar from "@/components/NavBar";
-import FleetSection from "@/components/FleetSection";
-import WhyUsSection from "@/components/WhyUsSection";
-import FAQSection from "@/components/FAQSection";
-import ContactSection from "@/components/ContactSection";
-import Footer from "@/components/Footer";
 
-// ── Video Frame Scrubber ──────────────────────────────
-function CarScrubber({ scroll }: { scroll: number }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const durationRef = useRef(0);
+// ── Video Frame Scrubber ──
+function VideoScrubber({ videoSrc, scroll }: { videoSrc: string; scroll: number }) {
+  const vidRef = useRef<HTMLVideoElement>(null);
+  const canRef = useRef<HTMLCanvasElement>(null);
+  const durRef = useRef(0);
   const [ready, setReady] = useState(false);
-  const drawRef = useRef<boolean>(false);
 
-  // Init: get video duration, seek to first frame
-  useEffect(() => {
-    const vid = videoRef.current;
-    if (!vid) return;
-    const onMeta = () => {
-      durationRef.current = vid.duration;
-      vid.currentTime = 0;
-      setReady(true);
-    };
-    vid.addEventListener("loadedmetadata", onMeta);
-    // Also draw first frame once data is loaded
-    const onData = () => {
-      if (vid.readyState >= 2) {
-        vid.currentTime = 0;
-        setTimeout(() => drawFrame(), 100);
-      }
-    };
-    vid.addEventListener("loadeddata", onData);
-    return () => {
-      vid.removeEventListener("loadedmetadata", onMeta);
-      vid.removeEventListener("loadeddata", onData);
-    };
+  const draw = useCallback(() => {
+    const vid = vidRef.current, can = canRef.current;
+    if (!vid || !can || !vid.videoWidth) return;
+    const ctx = can.getContext("2d");
+    if (!ctx) return;
+    const cw = can.clientWidth || window.innerWidth;
+    const ch = can.clientHeight || window.innerHeight;
+    can.width = cw; can.height = ch;
+    const vw = vid.videoWidth, vh = vid.videoHeight;
+    const s = Math.max(cw / vw, ch / vh);
+    const sw = vw * s, sh = vh * s;
+    ctx.clearRect(0, 0, cw, ch);
+    ctx.drawImage(vid, (cw - sw) / 2, (ch - sh) / 2, sw, sh);
   }, []);
 
-  // Seek video frame based on scroll
   useEffect(() => {
-    if (!ready || !videoRef.current) return;
-    const vid = videoRef.current;
-    const targetTime = scroll * durationRef.current;
-    if (Math.abs(vid.currentTime - targetTime) > 0.05) {
-      vid.currentTime = targetTime;
-    }
+    const v = vidRef.current;
+    if (!v) return;
+    const onMeta = () => { durRef.current = v.duration; v.currentTime = 0; setReady(true); };
+    v.addEventListener("loadedmetadata", onMeta);
+    v.addEventListener("loadeddata", () => { v.currentTime = 0; setTimeout(draw, 150); });
+    return () => { v.removeEventListener("loadedmetadata", onMeta); };
+  }, [draw]);
+
+  useEffect(() => {
+    if (!ready || !vidRef.current) return;
+    vidRef.current.currentTime = scroll * durRef.current;
   }, [scroll, ready]);
 
-  // Draw video frame to canvas when seeked
-  const drawFrame = useCallback(() => {
-    const vid = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!vid || !canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx || !vid.videoWidth) return;
-    const cw = canvas.clientWidth || window.innerWidth;
-    const ch = canvas.clientHeight || window.innerHeight;
-    canvas.width = cw;
-    canvas.height = ch;
-    // Cover-fill: video is portrait (360x640), canvas matches viewport aspect
-    const vw = vid.videoWidth, vh = vid.videoHeight;
-    const scale = Math.max(cw / vw, ch / vh);
-    const sw = vw * scale, sh = vh * scale;
-    const sx = (cw - sw) / 2, sy = (ch - sh) / 2;
-    ctx.clearRect(0, 0, cw, ch);
-    ctx.drawImage(vid, sx, sy, sw, sh);
-    drawRef.current = true;
-  }, []);
-
-  const onSeeked = useCallback(() => {
-    drawRef.current = false;
-    drawFrame();
-  }, [drawFrame]);
-
-  // Redraw on resize
   useEffect(() => {
-    const onResize = () => { if (drawRef.current) drawFrame(); };
+    const onResize = () => draw();
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [drawFrame]);
+  }, [draw]);
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center">
-      {/* Hidden video element for decoding */}
-      <video
-        ref={videoRef}
-        preload="auto"
-        muted
-        playsInline
-        className="hidden"
-        onSeeked={onSeeked}
-        poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'%3E%3Crect width='1' height='1' fill='%230a0a0a'/%3E%3C/svg%3E"
-      >
-        <source src="/car-scroll.mp4" type="video/mp4" />
+    <div className="absolute inset-0 bg-black overflow-hidden">
+      <video ref={vidRef} preload="auto" muted playsInline className="hidden" onSeeked={draw}>
+        <source src={videoSrc} type="video/mp4" />
       </video>
-
-      {/* Canvas showing the current frame */}
-      <canvas
-        ref={canvasRef}
-        className="w-full h-full object-cover"
-      />
-
-      {/* Gradient overlay on top of canvas */}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-black/20 to-[#0a0a0a]/30 pointer-events-none" />
-
-      {/* Placeholder when no video loaded */}
+      <canvas ref={canRef} className="w-full h-full" />
+      {/* Overlay gradient */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/30 pointer-events-none" />
+      {/* Loading state */}
       {!ready && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          {/* Animated car outline */}
-          <motion.div
-            animate={{ y: [0, -10, 0], opacity: [0.4, 1, 0.4] }}
-            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-            className="mb-6"
-          >
-            <svg className="w-32 h-32 text-brand-orange/20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
-            </svg>
-          </motion.div>
-          <p className="text-gray-600 text-sm font-mono text-center px-4">
-            Drop a car video here to enable<br />
-            <span className="text-brand-orange text-xs">scroll-driven scrubbing</span>
-          </p>
-          <div className="mt-6 text-[10px] text-gray-700 font-mono">
-            src/app/page.tsx → line 55
-          </div>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-12 h-12 border-2 border-brand-orange/30 border-t-brand-orange rounded-full animate-spin" />
         </div>
       )}
     </div>
   );
 }
 
-// ── Page ──
-export default function Home() {
-  const heroRef = useRef<HTMLDivElement>(null);
+// ── Hero Section (like Porsche configurator) ──
+function ConfiguratorHero() {
+  const containerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
-    target: heroRef,
+    target: containerRef,
     offset: ["start start", "end start"],
   });
+  const [s, setS] = useState(0);
+  useMotionValueEvent(scrollYProgress, "change", setS);
 
-  const [scrollVal, setScrollVal] = useState(0);
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.6], [1, 0]);
-  const heroY = useTransform(scrollYProgress, [0, 1], [0, 80]);
-
-  useMotionValueEvent(scrollYProgress, "change", (v) => {
-    setScrollVal(v);
-  });
+  const infoOpacity = useTransform(scrollYProgress, [0, 0.4, 0.7], [1, 0.5, 0]);
+  const infoY = useTransform(scrollYProgress, [0, 0.7], [0, -60]);
 
   return (
-    <main>
-      <NavBar />
+    <section ref={containerRef} className="relative h-[400vh] bg-black">
+      <div className="sticky top-0 h-screen w-full">
+        <VideoScrubber videoSrc="/car-scroll.mp4" scroll={s} />
 
-      {/* ── HERO: Video Frame Scrub ── */}
-      <section ref={heroRef} className="relative h-[300vh] bg-[#0a0a0a]">
-        {/* Sticky video frame */}
-        <motion.div style={{ opacity: heroOpacity }} className="sticky top-0 h-screen w-full overflow-hidden">
-          <CarScrubber scroll={scrollVal} />
-
-          {/* Text Overlay */}
-          <div className="absolute inset-0 pointer-events-none">
-            <motion.div style={{ y: heroY }} className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-              <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1], delay: 0.2 }}
-                className="inline-block bg-brand-orange text-white text-xs font-bold px-4 py-1.5 rounded-full mb-4 -rotate-2"
-              >
-                SEREMBAN&apos;S BEST SINCE 2020
-              </motion.div>
-
-              <motion.h1
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1], delay: 0.4 }}
-                className="text-5xl md:text-7xl lg:text-8xl font-black uppercase leading-[0.9] text-white"
-              >
-                Rent The<br />
-                <span className="text-brand-orange">Ride.</span><br />
-                Own The<br />
-                <span className="text-brand-orange">Road.</span>
-              </motion.h1>
-
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1], delay: 0.6 }}
-                className="text-gray-400 mt-6 max-w-md text-sm md:text-base"
-              >
-                50+ cars · Zero deposit · Free delivery Seremban · 24/7 service
-              </motion.p>
-            </motion.div>
-
-            {/* Scroll indicator */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1.5 }}
-              className="absolute bottom-8 left-1/2 -translate-x-1/2"
-            >
-              <motion.div
-                animate={{ y: [0, 8, 0] }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                className="text-brand-orange text-xs font-bold uppercase tracking-widest"
-              >
-                ↓ Scroll
-              </motion.div>
-            </motion.div>
+        {/* Overlay content — like Porsche page */}
+        <div className="absolute inset-0 pointer-events-none">
+          {/* Top bar */}
+          <div className="absolute top-0 left-0 right-0 p-6 md:p-10">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-brand-orange flex items-center justify-center font-black text-white text-sm">
+                JRV
+              </div>
+              <span className="text-white/80 text-xs font-semibold tracking-wider uppercase">Car Rental</span>
+            </div>
           </div>
 
-          {/* Bottom gradient */}
-          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#0a0a0a] to-transparent pointer-events-none" />
-        </motion.div>
+          {/* Center content */}
+          <motion.div
+            style={{ opacity: infoOpacity, y: infoY, bottom: "35%" }}
+            className="absolute left-0 right-0 px-6 md:px-10"
+          >
+            <div className="max-w-xl">
+              <p className="text-brand-orange text-xs font-bold tracking-[0.2em] uppercase mb-2">
+                Seremban &bull; Since 2020
+              </p>
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-white leading-[0.95] mb-3">
+                {`SEWA LAMA
+LAGI MURAH`}
+              </h1>
+              <p className="text-white/60 text-sm md:text-base max-w-md leading-relaxed">
+                50+ cars &bull; Zero deposit &bull; Free delivery Seremban &bull; 24/7
+              </p>
+            </div>
+          </motion.div>
 
-        {/* Stats */}
-        <div className="relative z-10 -mt-[100vh] h-screen flex items-end pb-16 md:pb-20">
-          <div className="max-w-7xl mx-auto px-4 w-full">
-            <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
-              viewport={{ once: true }}
-              className="grid grid-cols-3 gap-4 md:gap-8"
-            >
-              {[
-                { value: "50+", label: "Cars" },
-                { value: "1K+", label: "Happy Clients" },
-                { value: "4.9", label: "Google Rating" },
-              ].map((stat) => (
-                <div key={stat.label} className="text-center">
-                  <p className="text-3xl md:text-5xl font-black text-brand-orange">{stat.value}</p>
-                  <p className="text-xs md:text-sm text-gray-400 font-semibold uppercase tracking-wider mt-1">{stat.label}</p>
-                </div>
-              ))}
-            </motion.div>
-          </div>
+          {/* Bottom CTA bar */}
+          <motion.div
+            style={{ opacity: useTransform(scrollYProgress, [0, 0.3], [1, 0]) }}
+            className="absolute bottom-0 left-0 right-0 p-6 md:p-10"
+          >
+            <div className="flex flex-col sm:flex-row gap-3 max-w-xl">
+              <a
+                href="https://wa.me/60126565477"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-brand-orange text-white font-bold px-8 py-3.5 rounded-xl text-sm text-center hover:brightness-110 transition-all"
+              >
+                Book via WhatsApp
+              </a>
+              <a
+                href="#fleet"
+                className="border border-white/20 text-white font-semibold px-8 py-3.5 rounded-xl text-sm text-center hover:bg-white/5 transition-all"
+              >
+                View Our Fleet
+              </a>
+            </div>
+          </motion.div>
+
+          {/* Scroll hint */}
+          <motion.div
+            animate={{ opacity: [0.3, 1, 0.3] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="absolute bottom-1/2 right-6 md:right-10"
+          >
+            <span className="text-white/20 text-[10px] font-mono tracking-widest [writing-mode:vertical-rl]">
+              SCROLL
+            </span>
+          </motion.div>
         </div>
-      </section>
+      </div>
+    </section>
+  );
+}
 
-      <FleetSection />
-      <WhyUsSection />
-      <FAQSection />
-      <ContactSection />
-      <Footer />
+// ── Page ──
+export default function Home() {
+  return (
+    <main>
+      <ConfiguratorHero />
     </main>
   );
 }
