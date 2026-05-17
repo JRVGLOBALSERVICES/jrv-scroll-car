@@ -3,85 +3,96 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 
-// ── Video Scrubber ──
-function VideoScrubber({ src, sectionRef }: { src: string; sectionRef: React.RefObject<HTMLDivElement | null> }) {
-  const v = useRef<HTMLVideoElement>(null);
-  const c = useRef<HTMLCanvasElement>(null);
-  const dur = useRef(0);
-  const [ok, setOk] = useState(false);
+// ── Frame-based Scrubber ──
+const TOTAL_FRAMES = 121;
 
-  const draw = useCallback(() => {
-    const vid = v.current, can = c.current;
-    if (!vid || !can || !vid.videoWidth) return;
-    const ctx = can.getContext("2d");
-    if (!ctx) return;
-    const cw = can.clientWidth || window.innerWidth;
-    const ch = can.clientHeight || window.innerHeight;
-    can.width = cw; can.height = ch;
-    const s = Math.max(cw / vid.videoWidth, ch / vid.videoHeight);
-    const sw = vid.videoWidth * s, sh = vid.videoHeight * s;
-    ctx.clearRect(0, 0, cw, ch);
-    ctx.drawImage(vid, (cw - sw) / 2, (ch - sh) / 2, sw, sh);
+function frameUrl(i: number): string {
+  return `/frames/frame_${String(i + 1).padStart(4, "0")}.jpg`;
+}
+
+function FrameScrubber({ sectionRef }: { sectionRef: React.RefObject<HTMLDivElement | null> }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imagesRef = useRef<HTMLImageElement[]>([]);
+  const [ready, setReady] = useState(false);
+  const currentRef = useRef(-1);
+
+  // Preload all 121 frames
+  useEffect(() => {
+    const imgs: HTMLImageElement[] = [];
+    let loaded = 0;
+    const total = TOTAL_FRAMES;
+    for (let i = 0; i < total; i++) {
+      const img = new Image();
+      img.onload = img.onerror = () => {
+        loaded++;
+        if (loaded === total) {
+          imagesRef.current = imgs;
+          setReady(true);
+        }
+      };
+      img.src = frameUrl(i);
+      imgs.push(img);
+    }
+    return () => { imgs.forEach((i) => { i.src = ""; }); };
   }, []);
 
-  // Init video
-  useEffect(() => {
-    const el = v.current; if (!el) return;
-    const onMeta = () => { dur.current = el.duration; el.currentTime = 0; setOk(true); };
-    el.addEventListener("loadedmetadata", onMeta);
-    el.addEventListener("loadeddata", () => { el.currentTime = 0; setTimeout(draw, 200); });
-    return () => el.removeEventListener("loadedmetadata", onMeta);
-  }, [draw]);
+  const drawFrame = useCallback((fi: number) => {
+    const canvas = canvasRef.current;
+    const img = imagesRef.current[fi];
+    if (!canvas || !img || !img.complete || !img.naturalWidth) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const cw = canvas.clientWidth || window.innerWidth;
+    const ch = canvas.clientHeight || window.innerHeight;
+    canvas.width = cw; canvas.height = ch;
+    const scale = Math.max(cw / img.naturalWidth, ch / img.naturalHeight);
+    const sw = img.naturalWidth * scale, sh = img.naturalHeight * scale;
+    ctx.clearRect(0, 0, cw, ch);
+    ctx.drawImage(img, (cw - sw) / 2, (ch - sh) / 2, sw, sh);
+  }, []);
 
-  // Track scroll via Lenis
+  // Scroll tracking via Lenis
   useEffect(() => {
     const section = sectionRef.current;
-    if (!ok || !section) return;
-
+    if (!ready || !section) return;
     let cleanup: (() => void) | undefined;
-    let retryTimer: ReturnType<typeof setTimeout>;
+    let retry: ReturnType<typeof setTimeout>;
 
-    const tryAttach = () => {
+    const attach = () => {
       const lenis = (window as any).__lenis;
-      if (!lenis) {
-        retryTimer = setTimeout(tryAttach, 300);
-        return;
-      }
+      if (!lenis) { retry = setTimeout(attach, 300); return; }
 
       const onScroll = () => {
-        const vid = v.current;
-        if (!vid || !dur.current) return;
         const rect = section.getBoundingClientRect();
-        const sectionHeight = rect.height - window.innerHeight;
-        const progress = Math.max(0, Math.min(1, -rect.top / sectionHeight));
-        vid.currentTime = progress * dur.current;
-        console.log('[VS] scroll progress:', progress, 'time:', vid.currentTime);
+        const h = rect.height - window.innerHeight;
+        if (h <= 0) return;
+        const p = Math.max(0, Math.min(1, -rect.top / h));
+        const fi = Math.min(TOTAL_FRAMES - 1, Math.floor(p * TOTAL_FRAMES));
+        if (fi !== currentRef.current) { currentRef.current = fi; drawFrame(fi); }
       };
 
       lenis.on("scroll", onScroll);
       onScroll();
       cleanup = () => lenis.off("scroll", onScroll);
-      console.log('[VS] Attached');
     };
 
-    tryAttach();
-    return () => { clearTimeout(retryTimer); if (cleanup) cleanup(); };
-  }, [ok, sectionRef]);
+    attach();
+    return () => { clearTimeout(retry); if (cleanup) cleanup(); };
+  }, [ready, sectionRef, drawFrame]);
 
-  // Resize handler
+  // Resize
   useEffect(() => {
-    window.addEventListener("resize", draw);
-    return () => window.removeEventListener("resize", draw);
-  }, [draw]);
+    if (!ready) return;
+    const fn = () => { if (currentRef.current >= 0) drawFrame(currentRef.current); };
+    window.addEventListener("resize", fn);
+    return () => window.removeEventListener("resize", fn);
+  }, [ready, drawFrame]);
 
   return (
     <div className="absolute inset-0 bg-[#111118]">
-      <video ref={v} preload="auto" muted playsInline className="hidden" onSeeked={draw}>
-        <source src={src} type="video/mp4" />
-      </video>
-      <canvas ref={c} className="w-full h-full" />
+      <canvas ref={canvasRef} className="w-full h-full" />
       <div className="absolute inset-0 bg-gradient-to-t from-[#111118]/80 via-transparent to-[#111118]/20" />
-      {!ok && <div className="absolute inset-0 flex items-center justify-center"><div className="w-8 h-8 border-2 border-white/20 border-t-[#FF4500] rounded-full animate-spin" /></div>}
+      {!ready && <div className="absolute inset-0 flex items-center justify-center"><div className="w-8 h-8 border-2 border-white/20 border-t-[#FF4500] rounded-full animate-spin" /></div>}
     </div>
   );
 }
@@ -91,43 +102,36 @@ function Hero() {
   const ref = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState(0);
 
-  // Track scroll via Lenis
   useEffect(() => {
     const section = ref.current;
     if (!section) return;
-
     let cleanup: (() => void) | undefined;
-    let retryTimer: ReturnType<typeof setTimeout>;
+    let retry: ReturnType<typeof setTimeout>;
 
-    const tryAttach = () => {
+    const attach = () => {
       const lenis = (window as any).__lenis;
-      if (!lenis) {
-        retryTimer = setTimeout(tryAttach, 300);
-        return;
-      }
+      if (!lenis) { retry = setTimeout(attach, 300); return; }
 
       const onScroll = () => {
         const rect = section.getBoundingClientRect();
         const h = section.clientHeight - window.innerHeight;
         if (h <= 0) return;
         setProgress(Math.max(0, Math.min(1, -rect.top / h)));
-        console.log('[Hero] scroll progress:', Math.max(0, Math.min(1, -rect.top / h)));
       };
 
       lenis.on("scroll", onScroll);
       onScroll();
       cleanup = () => lenis.off("scroll", onScroll);
-      console.log('[Hero] Attached');
     };
 
-    tryAttach();
-    return () => { clearTimeout(retryTimer); if (cleanup) cleanup(); };
+    attach();
+    return () => { clearTimeout(retry); if (cleanup) cleanup(); };
   }, []);
 
   return (
     <section ref={ref} className="relative h-[400vh] bg-[#111118]">
       <div className="fixed top-0 left-0 right-0 h-screen w-full overflow-hidden">
-        <VideoScrubber src="/car-scroll.mp4" sectionRef={ref} />
+        <FrameScrubber sectionRef={ref} />
 
         <div className="absolute top-0 left-0 right-0 p-5 md:p-8 z-10">
           <div className="flex items-center gap-2.5">
@@ -143,8 +147,7 @@ function Hero() {
           <div className="max-w-lg">
             <p className="text-[#FF4500]/80 text-[10px] font-bold tracking-[0.25em] uppercase mb-2">Seremban · Since 2020</p>
             <h1 className="text-4xl md:text-6xl font-black text-white leading-[0.92] mb-2 whitespace-pre-line">
-              {`SEWA LAMA
-LAGI MURAH`}
+              {`SEWA LAMA\nLAGI MURAH`}
             </h1>
             <p className="text-white/40 text-xs max-w-xs leading-relaxed">50+ cars · Zero deposit · Free delivery Seremban · 24/7</p>
           </div>
@@ -168,7 +171,6 @@ LAGI MURAH`}
   );
 }
 
-// ── Sections ──
 function Stats() {
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }} viewport={{ once: true }} className="bg-white border-b border-gray-100 py-6 md:py-8">
