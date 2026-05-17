@@ -131,7 +131,7 @@ function Hero() {
 
   return (
     <section ref={ref} className="relative h-[200vh] bg-[#111118]">
-      <div className="fixed top-0 left-0 right-0 h-screen w-full overflow-hidden">
+      <div className="sticky top-0 left-0 right-0 h-screen w-full overflow-hidden">
         <FrameScrubber sectionRef={ref} />
 
         <div className="absolute top-0 left-0 right-0 p-5 md:p-8 z-10">
