@@ -1,10 +1,9 @@
 "use client";
 
 import { useRef, useState, useCallback, useEffect } from "react";
-import { motion, useScroll, useTransform, useMotionValueEvent } from "framer-motion";
-import { useLenis } from "@/components/LenisProvider";
+import { motion } from "framer-motion";
 
-// ── Video Scrubber with Lenis-aware scroll ──
+// ── Video Scrubber ──
 function VideoScrubber({ src, sectionRef }: { src: string; sectionRef: React.RefObject<HTMLDivElement | null> }) {
   const v = useRef<HTMLVideoElement>(null);
   const c = useRef<HTMLCanvasElement>(null);
@@ -25,34 +24,51 @@ function VideoScrubber({ src, sectionRef }: { src: string; sectionRef: React.Ref
     ctx.drawImage(vid, (cw - sw) / 2, (ch - sh) / 2, sw, sh);
   }, []);
 
+  // Init video
   useEffect(() => {
     const el = v.current; if (!el) return;
-    el.addEventListener("loadedmetadata", () => { dur.current = el.duration; el.currentTime = 0; setOk(true); });
+    const onMeta = () => { dur.current = el.duration; el.currentTime = 0; setOk(true); };
+    el.addEventListener("loadedmetadata", onMeta);
     el.addEventListener("loadeddata", () => { el.currentTime = 0; setTimeout(draw, 200); });
+    return () => el.removeEventListener("loadedmetadata", onMeta);
   }, [draw]);
-
-  const lenis = useLenis();
 
   // Track scroll via Lenis
   useEffect(() => {
-    if (!ok || !lenis || !sectionRef.current) return;
     const section = sectionRef.current;
+    if (!ok || !section) return;
 
-    const onLenisScroll = () => {
-      const vid = v.current;
-      if (!vid || !dur.current) return;
-      // Calculate progress through this section
-      const rect = section.getBoundingClientRect();
-      const sectionHeight = rect.height - window.innerHeight;
-      const progress = Math.max(0, Math.min(1, -rect.top / sectionHeight));
-      vid.currentTime = progress * dur.current;
+    let cleanup: (() => void) | undefined;
+    let retryTimer: ReturnType<typeof setTimeout>;
+
+    const tryAttach = () => {
+      const lenis = (window as any).__lenis;
+      if (!lenis) {
+        retryTimer = setTimeout(tryAttach, 300);
+        return;
+      }
+
+      const onScroll = () => {
+        const vid = v.current;
+        if (!vid || !dur.current) return;
+        const rect = section.getBoundingClientRect();
+        const sectionHeight = rect.height - window.innerHeight;
+        const progress = Math.max(0, Math.min(1, -rect.top / sectionHeight));
+        vid.currentTime = progress * dur.current;
+        console.log('[VS] scroll progress:', progress, 'time:', vid.currentTime);
+      };
+
+      lenis.on("scroll", onScroll);
+      onScroll();
+      cleanup = () => lenis.off("scroll", onScroll);
+      console.log('[VS] Attached');
     };
 
-    lenis.on("scroll", onLenisScroll);
-    onLenisScroll(); // initial frame
-    return () => lenis.off("scroll", onLenisScroll);
-  }, [ok, lenis, sectionRef]);
+    tryAttach();
+    return () => { clearTimeout(retryTimer); if (cleanup) cleanup(); };
+  }, [ok, sectionRef]);
 
+  // Resize handler
   useEffect(() => {
     window.addEventListener("resize", draw);
     return () => window.removeEventListener("resize", draw);
@@ -75,26 +91,42 @@ function Hero() {
   const ref = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState(0);
 
-  // Track Lenis scroll progress for overlay fades
-  const lenis = useLenis();
+  // Track scroll via Lenis
   useEffect(() => {
-    if (!lenis) return;
     const section = ref.current;
     if (!section) return;
-    const onScroll = () => {
-      const rect = section.getBoundingClientRect();
-      const h = section.clientHeight - window.innerHeight;
-      if (h <= 0) return;
-      setProgress(Math.max(0, Math.min(1, -rect.top / h)));
+
+    let cleanup: (() => void) | undefined;
+    let retryTimer: ReturnType<typeof setTimeout>;
+
+    const tryAttach = () => {
+      const lenis = (window as any).__lenis;
+      if (!lenis) {
+        retryTimer = setTimeout(tryAttach, 300);
+        return;
+      }
+
+      const onScroll = () => {
+        const rect = section.getBoundingClientRect();
+        const h = section.clientHeight - window.innerHeight;
+        if (h <= 0) return;
+        setProgress(Math.max(0, Math.min(1, -rect.top / h)));
+        console.log('[Hero] scroll progress:', Math.max(0, Math.min(1, -rect.top / h)));
+      };
+
+      lenis.on("scroll", onScroll);
+      onScroll();
+      cleanup = () => lenis.off("scroll", onScroll);
+      console.log('[Hero] Attached');
     };
-    lenis.on("scroll", onScroll);
-    onScroll();
-    return () => lenis.off("scroll", onScroll);
-  }, [lenis]);
+
+    tryAttach();
+    return () => { clearTimeout(retryTimer); if (cleanup) cleanup(); };
+  }, []);
 
   return (
     <section ref={ref} className="relative h-[400vh] bg-[#111118]">
-      <div className="fixed top-0 h-screen w-full overflow-hidden">
+      <div className="fixed top-0 left-0 right-0 h-screen w-full overflow-hidden">
         <VideoScrubber src="/car-scroll.mp4" sectionRef={ref} />
 
         <div className="absolute top-0 left-0 right-0 p-5 md:p-8 z-10">
@@ -168,7 +200,6 @@ function Fleet() {
     { n: "Mitsubishi Xpander", p: "RM 350", s: "7 seats · MPV" },
     { n: "Toyota Alphard", p: "RM 700", s: "7 seats · Luxury" },
   ];
-
   return (
     <section id="fleet" className="py-16 md:py-20 bg-white">
       <div className="max-w-5xl mx-auto px-4">
@@ -270,9 +301,7 @@ function CTA() {
         <p className="text-white/70 text-sm mt-2 max-w-md mx-auto">Book in under 5 minutes via WhatsApp. Free delivery, zero deposit, unlimited mileage.</p>
         <div className="flex flex-col sm:flex-row justify-center gap-3 mt-7">
           <a href="https://wa.me/60126565477" target="_blank" rel="noopener noreferrer"
-            className="bg-black text-white font-bold px-8 py-3.5 rounded-xl text-sm inline-flex items-center gap-2 hover:shadow-lg transition-all">
-            Book via WhatsApp
-          </a>
+            className="bg-black text-white font-bold px-8 py-3.5 rounded-xl text-sm inline-flex items-center gap-2 hover:shadow-lg transition-all">Book via WhatsApp</a>
           <a href="tel:+60126565477" className="text-white font-semibold text-sm underline underline-offset-4 decoration-white/30 hover:decoration-white transition-all">Or call +60 12-656 5477</a>
         </div>
         <div className="mt-6 text-white/60 text-[11px]">51, Jln S2 B18, Seremban 2 · 24 hours · 7 days</div>
