@@ -105,7 +105,7 @@ function HeroAndContent() {
       {/* Spacer — one viewport height */}
 
       {/* Spacer — creates scroll room while video is fixed */}
-      <div className="h-screen" />
+      <div style={{ height: "calc(100vh + 720px)" }} />
 
       {/* Video + all content inside one block */}
       <div
