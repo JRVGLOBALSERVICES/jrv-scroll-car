@@ -61,16 +61,7 @@ function CarScrubber({ scroll }: { scroll: number }) {
         onSeeked={onSeeked}
         poster="/car-poster.jpg"
       >
-        {/*
-          ──────────────────────────────────────────────
-          🚗 REPLACE THIS VIDEO SOURCE
-          ──────────────────────────────────────────────
-          Drop a short MP4 of a JRV fleet car here.
-          Best: 5-10 seconds, 360-720p, car driving or rotating.
-          The video should be portrait (9:16) or square.
-          ──────────────────────────────────────────────
-        */}
-        <source src="" type="video/mp4" />
+        <source src="/car-scroll.mp4" type="video/mp4" />
       </video>
 
       {/* Canvas showing the current frame */}
