@@ -53,10 +53,10 @@ function Scrubber({ onProg }: { onProg: (p: number) => void }) {
   }, [ok, draw, onProg]);
 
   return (
-    <div className="absolute inset-0 bg-[#02071B]">
+    <div className="absolute inset-0 bg-[black]">
       <canvas ref={c} className="block" />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#02071B]/70 via-transparent to-[#02071B]/20" />
-      {!ok && <div className="absolute inset-0 flex items-center justify-center bg-[#02071B]"><div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" /></div>}
+      <div className="absolute inset-0 bg-gradient-to-t from-[black]/70 via-transparent to-[black]/20" />
+      {!ok && <div className="absolute inset-0 flex items-center justify-center bg-[black]"><div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" /></div>}
     </div>
   );
 }
@@ -104,7 +104,7 @@ export default function Home() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-transparent" style={{ opacity: Math.max(0, 1 - p * 3) }}>
         <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-[#F15828] rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-[#FF4500] rounded-lg flex items-center justify-center">
               <span className="text-white font-black text-xs">JRV</span>
             </div>
             <span className="text-white/60 text-[10px] font-semibold tracking-widest uppercase">Car Rental</span>
@@ -119,7 +119,7 @@ export default function Home() {
         position: ended ? "relative" : "fixed",
         top: 0, left: 0, right: 0, height: "100vh",
         zIndex: ended ? 0 : 10,
-        background: "#02071B",
+        background: "black",
       }}>
         <Scrubber onProg={hp} />
 
@@ -130,7 +130,7 @@ export default function Home() {
             opacity: Math.min(1, Math.max(0, (p - 0.15) * 8)),
             transform: `translateY(${(1 - Math.min(1, Math.max(0, (p - 0.15) * 8))) * 20}px)`,
           }}>
-            <p className="text-[#F15828] text-xs font-bold tracking-[0.3em] uppercase mb-3">Sewa Lama Lagi Murah</p>
+            <p className="text-[#FF4500] text-xs font-bold tracking-[0.3em] uppercase mb-3">Sewa Lama Lagi Murah</p>
           </div>
 
           {/* Headline — fades in at 30-60% scroll */}
@@ -140,7 +140,7 @@ export default function Home() {
           }}>
             <h1 className="text-4xl md:text-7xl font-black text-white leading-[0.92] mb-3">
               Rent The Ride.<br />
-              <span className="text-[#F15828]">Own The Road.</span>
+              <span className="text-[#FF4500]">Own The Road.</span>
             </h1>
           </div>
 
@@ -168,7 +168,7 @@ export default function Home() {
 
         {/* Bottom CTA — fades out as scroll progresses */}
         <div className="absolute bottom-0 left-0 right-0 p-5 md:p-8" style={{ zIndex: 5, opacity: Math.max(0, 1 - p * 4) }}>
-          <a href="https://wa.me/60126565477" target="_blank" className="inline-block bg-[#F15828] text-white font-bold px-6 py-3 rounded-lg text-sm hover:brightness-110 transition-all">
+          <a href="https://wa.me/60126565477" target="_blank" className="inline-block bg-[#FF4500] text-white font-bold px-6 py-3 rounded-lg text-sm hover:brightness-110 transition-all">
             Book on WhatsApp
           </a>
         </div>
@@ -183,7 +183,7 @@ export default function Home() {
               "SEWA LAMA LAGI MURAH", "FREE DELIVERY", "ZERO DEPOSIT", "UNLIMITED MILEAGE"
             ]).map((t, i) => (
               <span key={i} className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.2em] mx-5">
-                {t} <span className="text-[#F15828]">★</span>
+                {t} <span className="text-[#FF4500]">★</span>
               </span>
             ))}
           </div>
@@ -193,7 +193,7 @@ export default function Home() {
         <section id="fleet" className="py-14 md:py-20 bg-[#FFF8F0]">
           <div className="max-w-5xl mx-auto px-5">
             <div className="text-center mb-10">
-              <h2 className="text-2xl md:text-4xl font-black text-[#02071B]">Choose Your Ride</h2>
+              <h2 className="text-2xl md:text-4xl font-black text-[black]">Choose Your Ride</h2>
               <p className="text-gray-400 text-xs mt-1">50+ cars · 12 models · From RM 110/day</p>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -210,11 +210,11 @@ export default function Home() {
                       </div>
                     </div>
                     <div className="p-3.5">
-                      <h3 className="font-bold text-[#02071B] text-sm">{car.n}</h3>
+                      <h3 className="font-bold text-[black] text-sm">{car.n}</h3>
                       <p className="text-gray-400 text-[10px] mt-0.5">{car.s}</p>
                       <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-gray-100">
                         <span className="text-black font-black text-base">{car.p}<span className="text-gray-300 text-[9px]">/day</span></span>
-                        <a href="https://wa.me/60126565477" className="text-[#F15828] text-[10px] font-bold uppercase tracking-wider group-hover:underline">Book</a>
+                        <a href="https://wa.me/60126565477" className="text-[#FF4500] text-[10px] font-bold uppercase tracking-wider group-hover:underline">Book</a>
                       </div>
                     </div>
                   </div>
@@ -228,7 +228,7 @@ export default function Home() {
         <section className="py-14 md:py-20 bg-white">
           <div className="max-w-5xl mx-auto px-5">
             <div className="text-center mb-10">
-              <h2 className="text-2xl md:text-4xl font-black text-[#02071B]">Why JRV?</h2>
+              <h2 className="text-2xl md:text-4xl font-black text-[black]">Why JRV?</h2>
               <p className="text-gray-400 text-xs mt-1">Local since 2020 · Family-owned · 4.9★</p>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -236,8 +236,8 @@ export default function Home() {
                 <div key={f} style={{
                   animation: ended ? `fadeUp 0.5s cubic-bezier(0.23,1,0.32,1) ${stagger(i, 0.6)} both` : "none",
                 }}>
-                  <div className="bg-[#FFF8F0] border border-gray-200 rounded-xl p-4 hover:border-[#F15828]/20 transition-all">
-                    <h3 className="font-bold text-[#02071B] text-sm">{f}</h3>
+                  <div className="bg-[#FFF8F0] border border-gray-200 rounded-xl p-4 hover:border-[#FF4500]/20 transition-all">
+                    <h3 className="font-bold text-[black] text-sm">{f}</h3>
                   </div>
                 </div>
               ))}
@@ -249,14 +249,14 @@ export default function Home() {
         <section className="py-14 md:py-20 bg-[#FFF8F0] border-t border-gray-200">
           <div className="max-w-3xl mx-auto px-5">
             <div className="text-center mb-8">
-              <h2 className="text-2xl md:text-4xl font-black text-[#02071B]">Got Questions?</h2>
+              <h2 className="text-2xl md:text-4xl font-black text-[black]">Got Questions?</h2>
             </div>
             <div className="space-y-2">
               {faqs.map((f, i) => (
                 <details key={i} className="group border border-gray-200 rounded-xl overflow-hidden bg-white">
-                  <summary className="px-5 py-3.5 cursor-pointer text-[#02071B] font-semibold text-sm flex items-center justify-between list-none hover:bg-gray-50 transition-colors">
+                  <summary className="px-5 py-3.5 cursor-pointer text-[black] font-semibold text-sm flex items-center justify-between list-none hover:bg-gray-50 transition-colors">
                     <span>{f.q}</span>
-                    <span className="text-[#F15828] group-open:rotate-180 transition-transform text-xs shrink-0">▾</span>
+                    <span className="text-[#FF4500] group-open:rotate-180 transition-transform text-xs shrink-0">▾</span>
                   </summary>
                   <div className="px-5 pb-3.5 text-gray-500 text-xs leading-relaxed border-t border-gray-100 pt-2.5">{f.a}</div>
                 </details>
@@ -266,27 +266,27 @@ export default function Home() {
         </section>
 
         {/* CTA */}
-        <section className="bg-[#02071B] py-16">
+        <section className="bg-[black] py-16">
           <div className="max-w-3xl mx-auto px-5 text-center">
-            <h2 className="text-3xl md:text-5xl font-black text-white">Ready To Hit<br /><span className="text-[#F15828]">The Road?</span></h2>
+            <h2 className="text-3xl md:text-5xl font-black text-white">Ready To Hit<br /><span className="text-[#FF4500]">The Road?</span></h2>
             <p className="text-white/50 text-sm mt-3 max-w-md mx-auto">Reply in minutes. Zero paperwork. Be on the road within the hour.</p>
             <div className="flex flex-col sm:flex-row justify-center gap-3 mt-8">
-              <a href="https://wa.me/60126565477" className="bg-[#F15828] text-white font-bold px-8 py-3.5 rounded-xl text-sm hover:brightness-110 transition-all">Book via WhatsApp</a>
+              <a href="https://wa.me/60126565477" className="bg-[#FF4500] text-white font-bold px-8 py-3.5 rounded-xl text-sm hover:brightness-110 transition-all">Book via WhatsApp</a>
               <a href="tel:+60126565477" className="text-white/50 font-semibold text-sm underline underline-offset-4 decoration-white/20 hover:decoration-white transition-all">Call +60 12-656 5477</a>
             </div>
           </div>
         </section>
 
         {/* Footer */}
-        <footer className="bg-[#02071B] border-t border-white/5 text-white/40 py-10 text-center text-[11px]">
+        <footer className="bg-[black] border-t border-white/5 text-white/40 py-10 text-center text-[11px]">
           <div className="max-w-5xl mx-auto px-5">
             <p>51, Jln S2 B18, Seremban 2, 70300 Seremban · 24 hours · 7 days</p>
             <div className="flex justify-center gap-5 my-4">
-              <a href="https://wa.me/60126565477" className="text-white/40 hover:text-[#F15828] text-xs transition-colors">WhatsApp</a>
-              <a href="tel:+60126565477" className="text-white/40 hover:text-[#F15828] text-xs transition-colors">Call</a>
-              <a href="https://jrvservices.co" className="text-white/40 hover:text-[#F15828] text-xs transition-colors">Website</a>
+              <a href="https://wa.me/60126565477" className="text-white/40 hover:text-[#FF4500] text-xs transition-colors">WhatsApp</a>
+              <a href="tel:+60126565477" className="text-white/40 hover:text-[#FF4500] text-xs transition-colors">Call</a>
+              <a href="https://jrvservices.co" className="text-white/40 hover:text-[#FF4500] text-xs transition-colors">Website</a>
             </div>
-            <p>© 2026 JRV Rental Services. Powered by <a href="https://jrvsystems.app" className="text-[#F15828] hover:underline">JRV Systems</a></p>
+            <p>© 2026 JRV Rental Services. Powered by <a href="https://jrvsystems.app" className="text-[#FF4500] hover:underline">JRV Systems</a></p>
           </div>
         </footer>
       </div>
