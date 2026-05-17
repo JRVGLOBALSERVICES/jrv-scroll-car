@@ -15,7 +15,9 @@ function CarScrubber({ scroll }: { scroll: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const durationRef = useRef(0);
   const [ready, setReady] = useState(false);
+  const drawRef = useRef<boolean>(false);
 
+  // Init: get video duration, seek to first frame
   useEffect(() => {
     const vid = videoRef.current;
     if (!vid) return;
@@ -25,29 +27,62 @@ function CarScrubber({ scroll }: { scroll: number }) {
       setReady(true);
     };
     vid.addEventListener("loadedmetadata", onMeta);
-    return () => vid.removeEventListener("loadedmetadata", onMeta);
+    // Also draw first frame once data is loaded
+    const onData = () => {
+      if (vid.readyState >= 2) {
+        vid.currentTime = 0;
+        setTimeout(() => drawFrame(), 100);
+      }
+    };
+    vid.addEventListener("loadeddata", onData);
+    return () => {
+      vid.removeEventListener("loadedmetadata", onMeta);
+      vid.removeEventListener("loadeddata", onData);
+    };
   }, []);
 
-  // Seek video frame based on scroll (0 → 1 maps to entire duration)
+  // Seek video frame based on scroll
   useEffect(() => {
-    if (!ready || !videoRef.current || !canvasRef.current) return;
+    if (!ready || !videoRef.current) return;
     const vid = videoRef.current;
-    const canvas = canvasRef.current;
     const targetTime = scroll * durationRef.current;
-    vid.currentTime = targetTime;
+    if (Math.abs(vid.currentTime - targetTime) > 0.05) {
+      vid.currentTime = targetTime;
+    }
   }, [scroll, ready]);
 
   // Draw video frame to canvas when seeked
-  const onSeeked = useCallback(() => {
+  const drawFrame = useCallback(() => {
     const vid = videoRef.current;
     const canvas = canvasRef.current;
     if (!vid || !canvas) return;
     const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    canvas.width = vid.videoWidth || 360;
-    canvas.height = vid.videoHeight || 640;
-    ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
+    if (!ctx || !vid.videoWidth) return;
+    const cw = canvas.clientWidth || window.innerWidth;
+    const ch = canvas.clientHeight || window.innerHeight;
+    canvas.width = cw;
+    canvas.height = ch;
+    // Cover-fill: video is portrait (360x640), canvas matches viewport aspect
+    const vw = vid.videoWidth, vh = vid.videoHeight;
+    const scale = Math.max(cw / vw, ch / vh);
+    const sw = vw * scale, sh = vh * scale;
+    const sx = (cw - sw) / 2, sy = (ch - sh) / 2;
+    ctx.clearRect(0, 0, cw, ch);
+    ctx.drawImage(vid, sx, sy, sw, sh);
+    drawRef.current = true;
   }, []);
+
+  const onSeeked = useCallback(() => {
+    drawRef.current = false;
+    drawFrame();
+  }, [drawFrame]);
+
+  // Redraw on resize
+  useEffect(() => {
+    const onResize = () => { if (drawRef.current) drawFrame(); };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [drawFrame]);
 
   return (
     <div className="absolute inset-0 flex items-center justify-center">
@@ -59,7 +94,7 @@ function CarScrubber({ scroll }: { scroll: number }) {
         playsInline
         className="hidden"
         onSeeked={onSeeked}
-        poster="/car-poster.jpg"
+        poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'%3E%3Crect width='1' height='1' fill='%230a0a0a'/%3E%3C/svg%3E"
       >
         <source src="/car-scroll.mp4" type="video/mp4" />
       </video>
