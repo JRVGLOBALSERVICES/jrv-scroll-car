@@ -90,7 +90,7 @@ function VideoHero() {
   return (
     <>
       {/* Fixed video — always fills viewport during scroll */}
-      <div className="fixed top-0 left-0 right-0 h-screen z-10" style={{ opacity: 1 - progress }}>
+      <div className="fixed top-0 left-0 right-0 h-screen z-10" style={{ opacity: Math.min(1, (1 - progress) * 5) }}>
         <FrameScrubber onProgress={setProgress} />
 
         <div className="absolute top-0 left-0 right-0 p-5 md:p-8 z-10">
