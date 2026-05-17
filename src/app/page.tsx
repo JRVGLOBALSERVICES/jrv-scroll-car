@@ -42,8 +42,9 @@ function FrameScrubber({ sectionRef }: { sectionRef: React.RefObject<HTMLDivElem
     if (!canvas || !img || !img.complete || !img.naturalWidth) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const cw = canvas.clientWidth || window.innerWidth;
-    const ch = canvas.clientHeight || window.innerHeight;
+    // Always use viewport dimensions
+    const cw = window.innerWidth;
+    const ch = window.innerHeight;
     canvas.width = cw; canvas.height = ch;
     const scale = Math.max(cw / img.naturalWidth, ch / img.naturalHeight);
     const sw = img.naturalWidth * scale, sh = img.naturalHeight * scale;
@@ -90,7 +91,7 @@ function FrameScrubber({ sectionRef }: { sectionRef: React.RefObject<HTMLDivElem
 
   return (
     <div className="absolute inset-0 bg-[#111118]">
-      <canvas ref={canvasRef} className="w-full h-full" />
+      <canvas ref={canvasRef} className="block w-screen h-screen" style={{ width: "100vw", height: "100vh" }} />
       <div className="absolute inset-0 bg-gradient-to-t from-[#111118]/80 via-transparent to-[#111118]/20" />
       {!ready && <div className="absolute inset-0 flex items-center justify-center"><div className="w-8 h-8 border-2 border-white/20 border-t-[#FF4500] rounded-full animate-spin" /></div>}
     </div>
