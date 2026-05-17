@@ -133,9 +133,9 @@ export default function Home() {
       {/* Spacer — pushes content to viewport position when video ends */}
       <div style={{ height: "calc(100vh - 56px)" }} />
 
-      {/* Video — fixed during scroll, scrolls up naturally after */}
+      {/* Video — always fixed, just z-index changes */}
       <div style={{
-        position: isEnded ? "relative" : "fixed",
+        position: "fixed",
         top: 0, left: 0, right: 0,
         height: "100vh",
         zIndex: isEnded ? 0 : 10,
